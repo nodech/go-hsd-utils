@@ -18,10 +18,6 @@ func (b *Bits) Size() int {
 	return b.size
 }
 
-func (b *Bits) Data() []byte {
-	return b.data[:]
-}
-
 func (b *Bits) SetBit(pos uint, bit uint) {
 	setBit(b.data[:], pos, bit)
 }
@@ -67,16 +63,18 @@ func (b *Bits) Deserialize(r io.Reader) error {
 		return err
 	}
 
-	if sizeByte&0x80 != 0 {
-		size = (int(sizeByte) - 0x80) << 8
+	size = int(sizeByte)
+
+	if size&0x80 != 0 {
+		size = (size - 0x80) << 8
 		sizeByte, err = readByte(r)
 
 		if err != nil {
 			return err
 		}
-	}
 
-	size |= int(sizeByte)
+		size |= int(sizeByte)
+	}
 
 	if size > UrkelKeyBits {
 		return errors.New("bitfield size too large")

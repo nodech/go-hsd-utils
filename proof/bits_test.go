@@ -66,8 +66,8 @@ func TestSetAndGetBit(t *testing.T) {
 		}
 
 		for i, b := range test.expectedDataBytes {
-			if bits.Data()[i] != b {
-				t.Errorf("expected byte %d to be %x, got %x", i, b, bits.Data()[i])
+			if bits.data[i] != b {
+				t.Errorf("expected byte %d to be %x, got %x", i, b, bits.data[i])
 			}
 		}
 	}
@@ -93,8 +93,8 @@ func TestReserialize(t *testing.T) {
 				}
 
 				for i, b := range test.expectedDataBytes {
-					if bits.Data()[i] != b {
-						t.Errorf("expected byte %d to be %x, got %x (size: %d)", i, b, bits.Data()[i], sizeVec.size)
+					if bits.data[i] != b {
+						t.Errorf("expected byte %d to be %x, got %x (size: %d)", i, b, bits.data[i], sizeVec.size)
 					}
 				}
 			}
