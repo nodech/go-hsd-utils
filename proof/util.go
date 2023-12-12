@@ -5,15 +5,19 @@ import (
 	"io"
 )
 
-func setBit(data []byte, index uint, bit uint) {
+func setBit(data []byte, index int, bit int) {
 	oct := index >> 3
 	bitValue := byte((bit & 1))
 	data[oct] |= bitValue << (7 - (index & 7))
 }
 
-func getBit(data []byte, index uint) uint {
+func getBit(data []byte, index int) int {
 	oct := index >> 3
-	return uint((data[oct] >> (7 - (index & 7))) & 1)
+	return int((data[oct] >> (7 - (index & 7))) & 1)
+}
+
+func hasBit(data []byte, index int) bool {
+	return getBit(data, index) == 1
 }
 
 func writeByte(w io.Writer, b byte) error {
@@ -32,13 +36,21 @@ func readUint32(r io.Reader) (uint32, error) {
 }
 
 func writeUint16(w io.Writer, n uint16) error {
-	return binary.Write(w, binary.LittleEndian, uint16(n))
+	var buf [2]byte
+	binary.LittleEndian.PutUint16(buf[:], n)
+	return writeBytesFull(w, buf[:])
 }
 
 func readUint16(r io.Reader) (uint16, error) {
 	var n uint16
-	err := binary.Read(r, binary.LittleEndian, &n)
-	return n, err
+	var buf [2]byte
+
+	if err := readBytesFull(r, buf[:]); err != nil {
+		return 0, err
+	}
+
+	n = binary.LittleEndian.Uint16(buf[:])
+	return n, nil
 }
 
 func writeBytes(w io.Writer, data []byte, n int) error {

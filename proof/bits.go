@@ -18,11 +18,47 @@ func (b *Bits) Size() int {
 	return b.size
 }
 
-func (b *Bits) SetBit(pos uint, bit uint) {
+func (b *Bits) DataByteSize() int {
+	return (b.size + 7) >> 3
+}
+
+func (b *Bits) countFrom(index int, key UrkelHash, depth int) int {
+	x := b.size - index
+	y := UrkelKeySize - depth
+	blen := x
+
+	if y < x {
+		blen = y
+	}
+
+	count := 0
+
+	for i := 0; i < blen; i++ {
+		if getBit(b.data[:], index) != getBit(key[:], depth) {
+			break
+		}
+
+		count++
+		index++
+		depth++
+	}
+
+	return count
+}
+
+func (b *Bits) Count(key UrkelHash, depth int) int {
+	return b.countFrom(0, key, depth)
+}
+
+func (b *Bits) Has(key UrkelHash, depth int) bool {
+	return b.Count(key, depth) == b.size
+}
+
+func (b *Bits) SetBit(pos int, bit int) {
 	setBit(b.data[:], pos, bit)
 }
 
-func (b *Bits) GetBit(pos uint) uint {
+func (b *Bits) GetBit(pos int) int {
 	return getBit(b.data[:], pos)
 }
 

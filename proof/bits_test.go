@@ -6,28 +6,54 @@ import (
 )
 
 var bitsAndBytes = []struct {
-	setBits           []uint
+	setBits           []int
 	expectedDataBytes [UrkelKeySize]byte
 }{
 	{
-		[]uint{0},
+		[]int{0},
 		[UrkelKeySize]byte{0x80},
 	},
 	{
-		[]uint{0, 1},
+		[]int{0, 1},
 		[UrkelKeySize]byte{0xc0},
 	},
 	{
-		[]uint{0, 7},
+		[]int{0, 7},
 		[UrkelKeySize]byte{0x81},
 	},
 	{
-		[]uint{0, 7, 8},
+		[]int{0, 7, 8},
 		[UrkelKeySize]byte{0x81, 0x80},
 	},
 	{
-		[]uint{0, 7, 8, 15, 16, 23, 24, 31},
+		[]int{0, 7, 8, 15, 16, 23, 24, 31},
 		[UrkelKeySize]byte{0x81, 0x81, 0x81, 0x81},
+	},
+}
+
+var prefixHas = []struct {
+	size     int
+	data     [UrkelKeySize]byte
+	key      [UrkelKeySize]byte
+	hasDepth int
+}{
+	{
+		size:     1,
+		data:     [UrkelKeySize]byte{0x80},
+		key:      [UrkelKeySize]byte{0x80, 0xff},
+		hasDepth: 0,
+	},
+	{
+		size:     8,
+		data:     [UrkelKeySize]byte{0xff},
+		key:      [UrkelKeySize]byte{0xff, 0x00},
+		hasDepth: 0,
+	},
+	{
+		size:     16,
+		data:     [UrkelKeySize]byte{0x80, 0xff},
+		key:      [UrkelKeySize]byte{0x80, 0x80, 0xff},
+		hasDepth: 8,
 	},
 }
 
@@ -142,6 +168,29 @@ func TestReserialize(t *testing.T) {
 			}
 
 			checkBits(bits)
+		}
+	}
+}
+
+func TestHas(t *testing.T) {
+	for _, test := range prefixHas {
+		bits := Bits{
+			data: test.data,
+			size: test.size,
+		}
+
+		for i := 0; i < test.size; i++ {
+			if i == test.hasDepth {
+				if bits.Has(test.key, i) == false {
+					t.Errorf("expected key %x to have depth %d", test.key, i)
+				}
+
+				continue
+			}
+
+			if bits.Has(test.key, i) == true {
+				t.Errorf("expected key %x to not have depth %d", test.key, i)
+			}
 		}
 	}
 }

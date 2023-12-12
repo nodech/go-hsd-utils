@@ -8,22 +8,22 @@ import (
 
 type ProofNode struct {
 	prefix Bits
-	hash   Hash
+	hash   UrkelHash
 }
 
 type Proof struct {
 	ptype ProofType
-	depth uint
+	depth int
 
 	nodes []*ProofNode
 
 	prefix Bits
 
-	left  Hash
-	right Hash
+	left  UrkelHash
+	right UrkelHash
 
-	hash      Hash
-	key       UrkelKey
+	hash      UrkelHash
+	key       UrkelHash
 	value     UrkelValue
 	valueSize uint16
 }
@@ -98,7 +98,7 @@ func (p *Proof) IsSane() bool {
 	return true
 }
 
-func (p *Proof) Push(prefix Bits, hash Hash) {
+func (p *Proof) Push(prefix Bits, hash UrkelHash) {
 	p.nodes = append(p.nodes, newProofNode(prefix, hash))
 }
 
@@ -115,7 +115,7 @@ func (p *Proof) Deserialize(r io.Reader) error {
 	}
 
 	p.ptype = ProofType(field >> 14)
-	p.depth = uint(field & (^(uint16(3) << uint16(14))))
+	p.depth = int(field & (^(uint16(3) << uint16(14))))
 
 	if p.depth > UrkelKeyBits {
 		return errors.New("Invalid depth")
@@ -132,8 +132,8 @@ func (p *Proof) Deserialize(r io.Reader) error {
 		return err
 	}
 
-	for i := uint(0); i < uint(count); i++ {
-		node := newProofNode(Bits{}, Hash{})
+	for i := 0; i < int(count); i++ {
+		node := newProofNode(Bits{}, UrkelHash{})
 
 		if getBit(bits, i) == 1 {
 			if err = node.prefix.Deserialize(r); err != nil {
@@ -210,7 +210,7 @@ func (p *Proof) Serialize(w io.Writer) error {
 
 	for i, node := range p.nodes {
 		if node.prefix.size > 0 {
-			setBit(bits, uint(i), 1)
+			setBit(bits, i, 1)
 		}
 	}
 
@@ -264,7 +264,81 @@ func (p *Proof) Serialize(w io.Writer) error {
 	return nil
 }
 
-func newProofNode(prefix Bits, hash Hash) *ProofNode {
+func (p *Proof) Verify(root UrkelHash, key UrkelHash) (UrkelCode, []byte) {
+	if p.IsSane() == false {
+		return ProofInvalid, nil
+	}
+
+	var leaf UrkelHash
+	var err error
+
+	switch p.ptype {
+	case ProofTypeDeadEnd:
+		// Do nothing. Leaf is already zero.
+	case ProofTypeShort:
+		if p.prefix.Has(key, p.depth) {
+			return ProofSamePath, nil
+		}
+
+		leaf, err = hashInternal(p.prefix, p.left, p.right)
+
+	case ProofTypeCollision:
+		if bytes.Compare(p.key[:], key[:]) == 0 {
+			return ProofSameKey, nil
+		}
+
+		leaf, err = hashLeaf(p.key, p.hash)
+	case ProofTypeExists:
+		leaf, err = hashValue(key, p.value, p.valueSize)
+	default:
+		return ProofInvalid, nil
+	}
+
+	if err != nil {
+		return ProofInvalid, nil
+	}
+
+	next := leaf
+	depth := p.depth
+
+	for i := len(p.nodes) - 1; i >= 0; i-- {
+		node := p.nodes[i]
+
+		if depth < node.prefix.size+1 {
+			return ProofNegDepth, nil
+		}
+
+		depth -= 1
+
+		if hasBit(key[:], depth) {
+			next, err = hashInternal(node.prefix, node.hash, next)
+		} else {
+			next, err = hashInternal(node.prefix, next, node.hash)
+		}
+
+		depth -= node.prefix.size
+
+		if err != nil {
+			return ProofInvalid, nil
+		}
+
+		if !node.prefix.Has(key, depth) {
+			return ProofPathMismatch, nil
+		}
+	}
+
+	if depth != 0 {
+		return ProofTooDeep, nil
+	}
+
+	if bytes.Compare(next[:], root[:]) != 0 {
+		return ProofHashMismatch, nil
+	}
+
+	return ProofOk, p.value[:p.valueSize]
+}
+
+func newProofNode(prefix Bits, hash UrkelHash) *ProofNode {
 	return &ProofNode{
 		prefix: prefix,
 		hash:   hash,

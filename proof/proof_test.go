@@ -10,7 +10,7 @@ import (
 
 type jsonProof struct {
 	ProofType string     `json:"type"`
-	Depth     uint       `json:"depth"`
+	Depth     int        `json:"depth"`
 	Nodes     [][]string `json:"nodes"`
 	Prefix    string     `json:"prefix"`
 	Left      string     `json:"left"`
@@ -152,4 +152,48 @@ func TestProofReencode(t *testing.T) {
 			t.Errorf("Encode mismatch: %s != %s", hex.EncodeToString(encoded.Bytes()), tp.Raw)
 		}
 	}
+}
+
+func TestProofVerify(t *testing.T) {
+	for _, tp := range testProofs {
+		var proof *Proof
+		var raw []byte
+		var err error
+
+		if raw, err = hex.DecodeString(tp.Raw); err != nil {
+			t.Errorf("hex.Decode failed: %s", err)
+		}
+
+		if proof, err = NewFromBytes(raw); err != nil {
+			t.Errorf("NewFromBytes failed: %s", err)
+		}
+
+		var root UrkelHash
+		var key UrkelHash
+
+		if root, err = readHash(tp.Root); err != nil {
+			t.Errorf("readHash failed: %s", err)
+		}
+
+		if key, err = readHash(tp.Key); err != nil {
+			t.Errorf("readHash failed: %s", err)
+		}
+
+		code, _ := proof.Verify(root, key)
+
+		if code != ProofOk {
+			t.Errorf("Verify failed")
+		}
+	}
+}
+
+func readHash(hexstr string) (hash UrkelHash, err error) {
+	var raw []byte
+
+	if raw, err = hex.DecodeString(hexstr); err != nil {
+		return
+	}
+
+	copy(hash[:], raw)
+	return
 }
