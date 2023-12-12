@@ -46,6 +46,40 @@ var SkipPrefix = [1]byte{0x02}
 var InternalPrefix = [1]byte{0x01}
 var LeafPrefix = [1]byte{0x00}
 
+func (pt ProofType) String() string {
+	switch pt {
+	case ProofTypeDeadEnd:
+		return "TYPE_DEADEND"
+	case ProofTypeShort:
+		return "TYPE_SHORT"
+	case ProofTypeCollision:
+		return "TYPE_COLLISION"
+	case ProofTypeExists:
+		return "TYPE_EXISTS"
+	case ProofTypeUnknown:
+		return "TYPE_UNKNOWN"
+	}
+
+	return "TYPE_UNKNOWN"
+}
+
+func StringToProofType(s string) ProofType {
+	switch s {
+	case "TYPE_DEADEND":
+		return ProofTypeDeadEnd
+	case "TYPE_SHORT":
+		return ProofTypeShort
+	case "TYPE_COLLISION":
+		return ProofTypeCollision
+	case "TYPE_EXISTS":
+		return ProofTypeExists
+	case "TYPE_UNKNOWN":
+		return ProofTypeUnknown
+	}
+
+	return ProofTypeUnknown
+}
+
 func hashInternal(prefix Bits, left UrkelHash, right UrkelHash) (UrkelHash, error) {
 	var hash UrkelHash
 

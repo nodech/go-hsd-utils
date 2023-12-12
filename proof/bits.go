@@ -121,6 +121,39 @@ func (b *Bits) Deserialize(r io.Reader) error {
 	return readBytes(r, b.data[:], int((size+7)>>3))
 }
 
+func (p *Bits) String() string {
+	// List all bits as 0 or 1.
+	buf := make([]byte, p.size)
+
+	for i := 0; i < p.size; i++ {
+		if p.GetBit(i) == 1 {
+			buf[i] = '1'
+		} else {
+			buf[i] = '0'
+		}
+	}
+
+	return string(buf)
+}
+
+func (p *Bits) FromString(str string) error {
+	if (len(str)+7)>>3 > UrkelKeySize {
+		return errors.New("bitfield string too long")
+	}
+
+	p.size = len(str)
+
+	for i := 0; i < p.size; i++ {
+		if str[i] == '1' {
+			p.SetBit(i, 1)
+		} else if str[i] != '0' {
+			return errors.New("invalid bitfield string")
+		}
+	}
+
+	return nil
+}
+
 func NewBits() (*Bits, error) {
 	return &Bits{size: UrkelKeyBits}, nil
 }
@@ -144,6 +177,13 @@ func NewBitsFromReader(r io.Reader, size int) (*Bits, error) {
 
 	bits := &Bits{size: size}
 	err := bits.Deserialize(r)
+
+	return bits, err
+}
+
+func NewBitsFromString(str string) (*Bits, error) {
+	bits := &Bits{}
+	err := bits.FromString(str)
 
 	return bits, err
 }

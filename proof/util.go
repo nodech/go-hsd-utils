@@ -2,6 +2,8 @@ package proof
 
 import (
 	"encoding/binary"
+	"encoding/hex"
+	"errors"
 	"io"
 )
 
@@ -90,4 +92,23 @@ func readBytes(r io.Reader, data []byte, n int) error {
 
 func readBytesFull(r io.Reader, data []byte) error {
 	return readBytes(r, data, len(data))
+}
+
+func decodeHashHex(s string) ([]byte, error) {
+	if len(s) != 64 {
+		return nil, errors.New("invalid hash length")
+	}
+
+	var b []byte
+	var err error
+
+	if b, err = hex.DecodeString(s); err != nil {
+		return nil, err
+	}
+
+	if len(b) != 32 {
+		return nil, errors.New("invalid hash length")
+	}
+
+	return b, nil
 }
