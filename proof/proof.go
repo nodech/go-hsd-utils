@@ -361,18 +361,17 @@ func (p *Proof) MarshalJSON() ([]byte, error) {
 	var hash string
 	var value string
 
-	if p.Type() == ProofTypeShort {
+	switch p.Type() {
+	case ProofTypeDeadEnd:
+		// Nothing.
+	case ProofTypeShort:
 		prefix = p.prefix.String()
 		left = hex.EncodeToString(p.left[:])
 		right = hex.EncodeToString(p.right[:])
-	}
-
-	if p.Type() == ProofTypeCollision {
+	case ProofTypeCollision:
 		key = hex.EncodeToString(p.key[:])
 		hash = hex.EncodeToString(p.hash[:])
-	}
-
-	if p.Type() == ProofTypeExists {
+	case ProofTypeExists:
 		value = hex.EncodeToString(p.value[:p.valueSize])
 	}
 
